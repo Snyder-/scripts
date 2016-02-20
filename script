@@ -1,0 +1,2 @@
+#!/usr/bin/env ruby
+puts "Hello Sean from a CLI script"
