@@ -1,9 +1,12 @@
 #!/usr/bin/env ruby
 
+LATEST_RUBY = "2.3.0".freeze
 PROJECT = Dir.open(Dir.pwd)
 git = proc { |f| f == ".git" }.freeze
 rspec = proc { |f| f == "spec" || f == ".rspec" }.freeze
 rubocop = proc { |f| f == ".rubocop.yml" }.freeze
+gemfile = proc { |f| f == "Gemfile" }.freeze
+ruby_version = proc { |f| f == ".ruby-version" }.freeze
 PROJECT_PATH = PROJECT.path.freeze
 
 def hide_console_output
@@ -13,19 +16,32 @@ ensure
   $stdout = STDOUT
 end
 
-puts "~ Running Plain Old Ruby Object Script ~".center(50, " ")
-# Check for Rspec
-if PROJECT.detect(&rspec)
-  puts "RSpec already installed."
+# Check for .ruby-version
+if PROJECT.detect(&ruby_version)
+  puts "Current Ruby: #{`ruby -v`.match(/\w+ \d\.\d\.\dp\d+/)}"
 else
+  File.open(".ruby-version", "w") do |f|
+    f.puts LATEST_RUBY
+  end
+end
+# Check for Gemfile
+unless PROJECT.detect(&gemfile)
+  `cp ~/scripts/rbporo/Gemfile #{PROJECT_PATH}`
+  puts "Adding Gemfile."
+  value = system("bundle install")
+  if value == false
+    puts "Please change your Ruby Version to #{LATEST_RUBY} and rerun rubyporo."
+    exit 1
+  end
+end
+# Check for Rspec
+unless PROJECT.detect(&rspec)
   `rspec --init`
   puts "Added Rspec v.#{`rspec --version`}"
 end
 
 # Check for Rubocop
-if PROJECT.detect(&rubocop)
-  puts "Rubocop already configured."
-else
+unless PROJECT.detect(&rubocop)
   `cp ~/scripts/rbporo/.rubocop.yml #{PROJECT_PATH}`
   puts "Added Rubocop v.#{`rubocop --version`}"
 end
