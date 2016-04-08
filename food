@@ -4,7 +4,7 @@ require "date"
 
 class FoodJournal
   def initialize
-    @file = "scripts/.food_journal"
+    @file = "#{Dir.home}/.food_journal"
     @entry_time = proc { Time.now.strftime("%A, %m/%d/%y, %T") }
     @time = ->(date) { date.strftime("%B %d, %Y") }
     @entry_regex = /(?<weekday>\w+)\, (?<month>\d+)\/(?<day>\d+)\/(?<year>\d+)/
