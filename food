@@ -1,0 +1,151 @@
+#!/usr/bin/env ruby
+
+require "date"
+
+class FoodJournal
+  def initialize
+    @file = "scripts/.food_journal"
+    @entry_time = proc { Time.now.strftime("%A, %m/%d/%y, %T") }
+    @time = ->(date) { date.strftime("%B %d, %Y") }
+    @entry_regex = /(?<weekday>\w+)\, (?<month>\d+)\/(?<day>\d+)\/(?<year>\d+)/
+    @calories = 0
+    @caloric_allowance = 1800
+    delegate_commands
+  end
+
+  def log
+    if ARGV[1] && ARGV[2]
+      create_and_write_log
+    else
+      invalid_log
+    end
+  end
+
+  def today
+    get_logs(Date.today)
+    puts "Total calories: #{calories}"
+  end
+
+  def yesterday
+    get_logs(Date.today - 1)
+    puts "Total calories: #{calories(Date.today - 1)}"
+  end
+
+  def view
+    if journal?
+      puts "All Entries"
+      puts File.read(@file)
+    else
+      puts "No Food Journal Exists in this Directory"
+    end
+  end
+
+  def clear!
+    if journal?
+      puts "Are you sure you want to clear your food journal? (y/n)"
+      answer = $stdin.gets.chomp.downcase
+      if answer == "y"
+        File.delete(@file)
+        "Your journal has been cleared!"
+      end
+    else
+      puts "You have no journal to clear."
+    end
+  end
+
+  def help
+    version
+    puts "Please use: log, view, calories, or clear!"
+    puts "Journal can be found at #{@file}"
+  end
+
+  def version
+    puts "Food Journal v0.0.1"
+  end
+
+  private
+
+  def get_logs(date)
+    food_eaten_today = ["Food for #{@time.call(date)}"]
+    if journal?
+      File.open(@file) do |f|
+        f.each do |line|
+          if entry = line.match(@entry_regex)
+            if date_matches(entry, date)
+              food_eaten_today << line
+            end
+          end
+        end
+      end
+      puts food_eaten_today
+    else
+      puts "No Journal Entries..."
+    end
+  end
+
+  def date_matches(entry, date)
+    year = ("20" + entry["year"]).to_i
+    month = entry["month"].to_i
+    day = entry["day"].to_i
+
+    Date.new(year, month, day).eql?(date)
+  end
+
+  def get_calories(date)
+    if journal?
+      File.open(@file) do |f|
+        f.each do |line|
+          if entry = line.match(@entry_regex)
+            if date_matches(entry, date)
+              line =~ /(Cals: ([\d]+))/
+              @calories += $2.to_i
+            end
+          end
+        end
+      end
+    end
+  end
+
+  def create_and_write_log
+    entry = "#{@entry_time.call} Food: #{ARGV[1]} | Cals: #{ARGV[2]}"
+    write_to_journal(entry)
+    today
+  end
+
+  def invalid_log
+    puts "INVALID FOOD ENTRY!"
+    puts "Example: foodjournal log food-name calories"
+    puts "\t foodjournal log pizza 250"
+  end
+
+  def delegate_commands
+    if ARGV[0]
+      __send__(ARGV[0])
+    else
+      __send__(:help)
+    end
+  end
+
+  def method_missing(*args)
+    return help if args.include?("-h".to_sym)
+    return version if args.include?("-v".to_sym)
+    version
+    puts "Please use: log, view, calories, or clear!"
+    puts "Journal can be found at #{@file}"
+  end
+
+  def write_to_journal(entry)
+    File.open(@file, "a") { |file| file.puts(entry) }
+  end
+
+  def journal?
+    File.exists?(@file)
+  end
+
+  def calories(date = Date.today)
+    get_calories(date)
+    @calories
+  end
+end
+
+FoodJournal.new
