@@ -1,0 +1,15 @@
+#!/bin/sh
+
+# Progress bar for script files. Writes to the same line.
+
+pre=""
+for (( i = 0; i <= 100; i+=2)); do
+  pre+="#"
+  if [[ $i -ge 100 ]]; then
+    echo "#######            ($i% completed!)           \r\c"
+    sleep 2
+  else
+    echo "($i%)$pre\r\c"
+    sleep 0.1
+  fi
+done
